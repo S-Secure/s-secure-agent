@@ -4,8 +4,16 @@ from socket import gethostname
 import time
 import commands
 import json
+import socket
 
-#print gethostname()
+def getAgentDetails():
+	agent_details = {}
+	dummy_mac = "52:54:00:86:c5:a3"
+	dummy_ip = "192.168.202.11"
+	agent_details['hostname'] = str(gethostname())
+	agent_details['ipv4_address'] = dummy_ip
+	agent_details['mac_address'] = dummy_mac
+	return agent_details
 
 def getPackageDetails():
 	package_data = []
@@ -46,9 +54,9 @@ def compare(current_list, latest_list):
 	"インストールされているパッケージの最新情報と、前回比較時に取得したパッケージ情報を比較し差分を抽出するメソッド"
 	current_package_list = current_list
 	latest_package_list = latest_list
-	install_package_list = []
+	install_package_list = ["install"]
 	update_package_list = []
-	delete_package_list = []
+	delete_package_list = ["delete"]
 	
 	"インストールされたパッケージを抽出"
 	for l_row in latest_package_list:
@@ -73,12 +81,27 @@ def compare(current_list, latest_list):
 
 		if not match:
 			delete_package_list.append(c_row)
+	return (install_package_list, delete_package_list)
+
+def sendToApi(package, agent):
+	data = {}
+	data.update(agent)
+	if package[0] == "install" :
+		data['method'] = package[0]
+		#ここからIterato
+	xxx
+		data['software'] = package[1]
+		pass
+		#送信するデータ hostname ip mac software
+	elif package[0] == "delete" :
+		pass
 	
-	print(install_package_list)
-	print(delete_package_list)
+		#Send
+	print json.dumps(data, indent=4)
+		
+	
 
-
-def sendToApi():
-	pass
-
-compare(readPackageDetails(), dummyreadPackageDetails())
+agedic = getAgentDetails()
+inslist = compare(readPackageDetails(), dummyreadPackageDetails())[0]
+dellist = compare(readPackageDetails(), dummyreadPackageDetails())[1]
+sendToApi(inslist, agedic)
