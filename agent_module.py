@@ -40,7 +40,6 @@ def getPackageDetails():
 	2.add list
 	4.return list
 	"""
-	#package_names = commands.getstatusoutput('rpm -qa --qf={\'product\'" ":" \""%{NAME}"\""", "\"version\"" ":" \""%{VERSION}"\""", "\"vendor\"" ":" \""%{VENDOR}"\""", "\"release\"" ":" \""%{RELEASE}"\""", "\"nevr\"" ":" \""%{NEVR}"\""", "\"platform\"" ":" \""%{PLATFORM}"\"\}@@@@@" bash')[1]
 	package_names = commands.getstatusoutput('bash callme.sh')[1]
 	package_name_list = package_names.split("@@@@@")
 	package_name_list = filter(lambda s:s != '', package_name_list)
@@ -102,7 +101,6 @@ def sendToApi(package, agent):
 	data['uuid'] = agent['uuid']
 	if package[0] == "install" :
 		data['method'] = package[0]
-		#ここからIterato
 		package.remove("install")
 		for p in package:
 			data['software'] = p
@@ -120,10 +118,6 @@ def sendToApi(package, agent):
 			print r.text
 		print data
 	
-		#Send
-	#print json.dumps(data, indent=4)
-		
-	
 def registAgent(agent):
 	data = {}
 #	data['method'] = "join"
@@ -135,19 +129,14 @@ def registAgent(agent):
 
 if __name__ == "__main__":
 	agedic = getAgentDetails()
-	if os.path.isfile("./.uuid"):	#Agentが初回起動かどうか
+	if not os.path.isfile("./.uuid"):	#Agentが初回起動かどうか
 		#	Agentの登録
 		registAgent(agedic)
 		#	インストールされている全パッケージ情報の取得
 		all_package_list = compare([],getPackageDetails())[0]
 		#	パッケージ情報（ソフトウェア）の送信
 		sendToApi(all_package_list, agedic)
-
-	
-
-#inslist = compare(readPackageDetails(), dummyreadPackageDetails())[0]
-#inslist = compare(readPackageDetails(), dummyreadPackageDetails())[0]
-#print inslist
-#dellist = compare(readPackageDetails(), dummyreadPackageDetails())[1]
-#sendToApi(inslist, agedic)
-#dummywritePackageDetails()
+	else:
+		#inslist = compare(readPackageDetails(), dummyreadPackageDetails())[0]
+		#dellist = compare(readPackageDetails(), dummyreadPackageDetails())[1]
+		pass
