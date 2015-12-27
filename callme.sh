@@ -1,0 +1,1 @@
+rpm -qa --qf={\"product\"" ":" \""%{NAME}"\""", "\"version\"" ":" \""%{VERSION}"\""", "\"vendor\"" ":" \""%{VENDOR}"\""", "\"release\"" ":" \""%{RELEASE}"\""", "\"nevr\"" ":" \""%{NEVR}"\""", "\"platform\"" ":" \""%{PLATFORM}"\"\}@@@@@"
