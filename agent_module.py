@@ -2,23 +2,32 @@
 
 from socket import gethostname
 import requests
-import time
 import commands
 import json
 import socket
 import uuid
 import os.path
+import platform
 
-ENDPOINT = "http://192.168.202.13:8000/"
+ENDPOINT = "http://192.168.202.51:8000/"
 
 def getAgentDetails():
 	agent_details = {}
-	dummy_mac = "52:54:00:86:c5:a3"
-	dummy_ip = "192.168.202.11"
 	agent_details['name'] = str(gethostname())
 	agent_details['hostname'] = str(gethostname())
-	agent_details['ipv4address'] = dummy_ip
-	agent_details['macaddress'] = dummy_mac
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	s.connect(("8.8.8.8", 80))
+	agent_details['ipv4address'] = s.getsockname()[0]
+	f = open('/etc/redhat-release')
+	lines = f.readlines()
+	f.close()
+	agent_details['os'] = lines[0].rstrip()
+	f = open('/etc/system-release-cpe')
+	lines = f.readlines()
+	f.close()
+	agent_details['os_cpe'] = lines[0].rstrip()
+	agent_details['os_type'] = platform.system()
+	agent_details['bit'] = platform.machine()
 
 	if os.path.isfile("./.uuid"):
 		f = open(".uuid","r")
@@ -33,13 +42,6 @@ def getAgentDetails():
 
 def getPackageDetails():
 	package_data = []
-	"""
-	1.All Package Name get
-	1.Iteratable PackageDetail
-	1.add dic
-	2.add list
-	4.return list
-	"""
 	package_names = commands.getstatusoutput('bash callme.sh')[1]
 	package_name_list = package_names.split("@@@@@")
 	package_name_list = filter(lambda s:s != '', package_name_list)
@@ -86,14 +88,13 @@ def compare(current_list, latest_list):
 			install_package_list.append(l_row)
 
 	"リムーブされたパッケージを抽出"
-	#for c_row in current_package_list:
-	#	match = False
-	#	for l_row in latest_package_list:
-	#		if c_row == l_row:
-	#			match = True
-	#
-	#	if not match:
-	#		delete_package_list.append(c_row)
+	for c_row in current_package_list:
+		match = False
+		for l_row in latest_package_list:
+			if c_row == l_row:
+				match = True
+		if not match:
+			delete_package_list.append(c_row)
 	return (install_package_list, delete_package_list)
 
 def sendToApi(package, agent):
@@ -120,23 +121,39 @@ def sendToApi(package, agent):
 	
 def registAgent(agent):
 	data = {}
-#	data['method'] = "join"
 	data.update(agent)
-	r = requests.post(ENDPOINT+"agent/add/", json=data)
 	#print data
-	print r.status_code
+	r = requests.post(ENDPOINT+"agent/add/", json=data)
 	print r.text
 
 if __name__ == "__main__":
 	agedic = getAgentDetails()
-	if not os.path.isfile("./.uuid"):	#Agentが初回起動かどうか
+	if os.path.isfile("./.uuid"):	#Agentが初回起動かどうか
+	#if not os.path.isfile("./.uuid"):	#Agentが初回起動かどうか
 		#	Agentの登録
-		registAgent(agedic)
+		try:
+			registAgent(agedic)
+		except:
+			print "Connection refused"
 		#	インストールされている全パッケージ情報の取得
 		all_package_list = compare([],getPackageDetails())[0]
 		#	パッケージ情報（ソフトウェア）の送信
-		sendToApi(all_package_list, agedic)
+		try:
+			sendToApi(all_package_list, agedic)
+		except:
+			print "Connection refused"
+		#	パッケージ情報をファイルに保存
+		writePackageDetails(all_package_list)
 	else:
-		#inslist = compare(readPackageDetails(), dummyreadPackageDetails())[0]
-		#dellist = compare(readPackageDetails(), dummyreadPackageDetails())[1]
-		pass
+		#	前回APIにデータを送信した後に新規にインストールされたパッケージ情報の取得
+		inslist = compare(readPackageDetails(), dummyreadPackageDetails())[0]
+		#	前回APIにデータを送信した後でアンインストールされたパッケージ情報の取得
+		dellist = compare(readPackageDetails(), dummyreadPackageDetails())[1]
+		#   新規にインストールされたパッケージ情報（ソフトウェア）の送信
+		sendToApi(inslist, agedic)
+		#   アンインストールされたパッケージ情報（ソフトウェア）の送信
+		sendToApi(dellist, agedic)
+		#   インストールされている全パッケージ情報の取得
+		all_package_list = compare([],getPackageDetails())[0]
+		#	パッケージ情報をファイルに保存
+		writePackageDetails(all_package_list)
